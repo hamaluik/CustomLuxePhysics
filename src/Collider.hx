@@ -8,6 +8,7 @@ class Collider extends Component {
 	public var aabb:AABB;
 	public var vel:Velocity;
 	public var acc:Acceleration;
+	public var collisionFaces:CollisionFaces;
 
 	public function new( ) {
 		super( {name: 'Collider' });
@@ -20,6 +21,7 @@ class Collider extends Component {
 		}
 		vel = get('Velocity');
 		acc = get('Acceleration');
+		collisionFaces = get('CollisionFaces');
 	}
 
 	override public function onadded() {

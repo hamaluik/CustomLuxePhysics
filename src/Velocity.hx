@@ -26,6 +26,6 @@ class Velocity extends Component {
 	}
 
 	override public function update(dt:Float) {
-		aabb.move( v.x * dt, v.y * dt );
+		aabb.move( v.x * dt * Luxe.timescale, v.y * dt * Luxe.timescale );
 	}
 }
