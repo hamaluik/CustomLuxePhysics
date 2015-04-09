@@ -3,6 +3,8 @@ import luxe.Physics;
 import luxe.Entity;
 import luxe.Vector;
 
+import components.*;
+
 class Main extends luxe.Game {
 	var player:Entity;
 	var platform:Entity;

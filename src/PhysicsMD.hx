@@ -6,6 +6,10 @@ import luxe.Physics;
 import luxe.Rectangle;
 import luxe.Vector;
 
+import components.Collider;
+import components.CollisionFaces;
+import components.Velocity;
+
 class PhysicsMD extends PhysicsEngine {
 	public static var instance:PhysicsMD;
 
@@ -113,75 +117,98 @@ class PhysicsMD extends PhysicsEngine {
 				collider.collisionFaces.clearFlags( );
 			}
 
-			// loop through all the static colliders
-			for(staticCollider in colliders) {
-				// skip ourselves
-				// and any dynamic colliders
-				if(collider == staticCollider || staticCollider.isDynamic) {
-					continue;
-				}
-
-				// calculate the minkowski difference
-				minkowskiDifference(collider.aabb.rectangle, staticCollider.aabb.rectangle);
-
-				// see if they overlap!
-				if(mdResult.x <= 0 && (mdResult.x + mdResult.w) >= 0 && mdResult.y <= 0 && (mdResult.y + mdResult.h) >= 0) {
-
-					// yup, they're colliding!
-					// calculate the penetration vector
-					calculatePenetration();
-					
-					// set the collision faces flags
-					if(collider.collisionFaces != null) {
-						if(Math.abs(collider.aabb.rectangle.y - (staticCollider.aabb.rectangle.y + staticCollider.aabb.rectangle.h)) <= 0.5) {
-							collider.collisionFaces.touching.top = true;
-						}
-						if(Math.abs((collider.aabb.rectangle.x + collider.aabb.rectangle.w) - staticCollider.aabb.rectangle.x) <= 0.5) {
-							collider.collisionFaces.touching.right = true;
-						}
-						if(Math.abs((collider.aabb.rectangle.y + collider.aabb.rectangle.h) - staticCollider.aabb.rectangle.y) <= 0.5) {
-							collider.collisionFaces.touching.bottom = true;
-						}
-						if(Math.abs(collider.aabb.rectangle.x - (staticCollider.aabb.rectangle.x + staticCollider.aabb.rectangle.w)) <= 0.5) {
-							collider.collisionFaces.touching.left = true;
-						}
-					}
-
-					// don't do anything if the penetration is 0
-					if(penetration.x == 0 && penetration.y == 0) {
+			// do a couple iterations
+			for(iteration in 0...2) {
+				// loop through all the static colliders
+				for(staticCollider in colliders) {
+					// skip ourselves
+					// and any dynamic colliders
+					if(collider == staticCollider || staticCollider.isDynamic) {
 						continue;
 					}
 
-					// remove the normal velocity
-					var tangent:Vector = new Vector(-penetration.y, penetration.x).normalized;
-					var dp:Float = (collider.vel.v.x * tangent.x) + (collider.vel.v.y * tangent.y);
-					collider.vel.v.x = tangent.x * dp;
-					collider.vel.v.y = tangent.y * dp;
+					// calculate the minkowski difference
+					minkowskiDifference(collider.aabb.rectangle, staticCollider.aabb.rectangle);
 
-					// and push it out
-					collider.aabb.move(-penetration.x, -penetration.y);
-				}
-				else {
-					// see if they might overlap this frame!
-					var relativeMotion = new Vector(collider.vel.v.x * Luxe.physics.step_delta * Luxe.timescale, collider.vel.v.y * Luxe.physics.step_delta * Luxe.timescale);
-					var h:Float = getRayIntersectionFraction(relativeMotion);
+					// see if they overlap!
+					if(mdResult.x <= 0 && (mdResult.x + mdResult.w) >= 0 && mdResult.y <= 0 && (mdResult.y + mdResult.h) >= 0) {
 
-					if(h < Math.POSITIVE_INFINITY) {
-						// yup there WILL be a collision!
+						// yup, they're colliding!
+						// calculate the penetration vector
+						calculatePenetration();
+						
+						// set the collision faces flags
+						if(collider.collisionFaces != null) {
+							if(Math.abs(collider.aabb.rectangle.y - (staticCollider.aabb.rectangle.y + staticCollider.aabb.rectangle.h)) <= 1) {
+								collider.collisionFaces.touching.top = true;
+							}
+							if(Math.abs((collider.aabb.rectangle.x + collider.aabb.rectangle.w) - staticCollider.aabb.rectangle.x) <= 1) {
+								collider.collisionFaces.touching.right = true;
+							}
+							if(Math.abs((collider.aabb.rectangle.y + collider.aabb.rectangle.h) - staticCollider.aabb.rectangle.y) <= 1) {
+								collider.collisionFaces.touching.bottom = true;
+							}
+							if(Math.abs(collider.aabb.rectangle.x - (staticCollider.aabb.rectangle.x + staticCollider.aabb.rectangle.w)) <= 1) {
+								collider.collisionFaces.touching.left = true;
+							}
+						}
 
-						// move it into place!
-						collider.aabb.move(collider.vel.v.x * Luxe.physics.step_delta * Luxe.timescale * h, collider.vel.v.y * Luxe.physics.step_delta * Luxe.timescale * h);
+						// don't do anything if the penetration is 0
+						if(penetration.x == 0 && penetration.y == 0) {
+							continue;
+						}
 
-						// zero out the normal velocity
-						var tangent:Vector = new Vector(-relativeMotion.y, relativeMotion.x).normalized;
+						// remove the normal velocity
+						var tangent:Vector = new Vector(-penetration.y, penetration.x).normalized;
 						var dp:Float = (collider.vel.v.x * tangent.x) + (collider.vel.v.y * tangent.y);
 						collider.vel.v.x = tangent.x * dp;
 						collider.vel.v.y = tangent.y * dp;
+
+						// and push it out
+						collider.aabb.move(-penetration.x, -penetration.y);
 					}
-					else {
+					/*else {
+						// see if they might overlap this frame!
+						var relativeMotion = new Vector(collider.vel.v.x * Luxe.physics.step_delta, collider.vel.v.y * Luxe.physics.step_delta);
+						var h:Float = getRayIntersectionFraction(relativeMotion);
+
+						if(h < Math.POSITIVE_INFINITY) {
+							// yup there WILL be a collision!
+
+							// move it into place!
+							collider.aabb.move(collider.vel.v.x * Luxe.physics.step_delta * h, collider.vel.v.y * Luxe.physics.step_delta * h);
+
+							// zero out the normal velocity
+							var tangent:Vector = new Vector(-relativeMotion.y, relativeMotion.x).normalized;
+							var dp:Float = (collider.vel.v.x * tangent.x) + (collider.vel.v.y * tangent.y);
+							collider.vel.v.x = tangent.x * dp;
+							collider.vel.v.y = tangent.y * dp;
+						
+							// set the collision faces flags
+							if(collider.collisionFaces != null) {
+								if(Math.abs(collider.aabb.rectangle.y - (staticCollider.aabb.rectangle.y + staticCollider.aabb.rectangle.h)) <= 1) {
+									collider.collisionFaces.touching.top = true;
+								}
+								if(Math.abs((collider.aabb.rectangle.x + collider.aabb.rectangle.w) - staticCollider.aabb.rectangle.x) <= 1) {
+									collider.collisionFaces.touching.right = true;
+								}
+								if(Math.abs((collider.aabb.rectangle.y + collider.aabb.rectangle.h) - staticCollider.aabb.rectangle.y) <= 1) {
+									collider.collisionFaces.touching.bottom = true;
+								}
+								if(Math.abs(collider.aabb.rectangle.x - (staticCollider.aabb.rectangle.x + staticCollider.aabb.rectangle.w)) <= 1) {
+									collider.collisionFaces.touching.left = true;
+								}
+							}
+						}
+						else {
+							// move it normally!
+							collider.aabb.move(collider.vel.v.x * Luxe.physics.step_delta, collider.vel.v.y * Luxe.physics.step_delta);
+						}
+					}*/
+					/*else {
 						// move it normally!
-						collider.aabb.move(collider.vel.v.x * Luxe.physics.step_delta * Luxe.timescale, collider.vel.v.y * Luxe.physics.step_delta * Luxe.timescale);
-					}
+						collider.aabb.move(collider.vel.v.x * Luxe.physics.step_delta, collider.vel.v.y * Luxe.physics.step_delta);
+					}*/
 				}
 			}
 		}
@@ -221,12 +248,12 @@ class PhysicsMD extends PhysicsEngine {
 		}
 	}
 
-	private function getLineIntersection(originA:Vector, endA:Vector, originB:Vector, endB:Vector) {
+	/*private function getLineIntersection(originA:Vector, endA:Vector, originB:Vector, endB:Vector):Float {
 		var r:Vector = new Vector(endA.x - originA.x, endA.y - originA.y);
 		var s:Vector = new Vector(endB.x - originB.x, endB.y - originB.y);
 		var delta:Vector = new Vector(originB.x - originA.x, originB.y - originA.x);
 		var numerator:Float = Vector.Cross(delta, r).z;
-		var denominator:Float = Vector.Cross(r, s);
+		var denominator:Float = Vector.Cross(r, s).z;
 
 		if(numerator == 0 && denominator == 0) {
 			return Math.POSITIVE_INFINITY;
@@ -243,7 +270,7 @@ class PhysicsMD extends PhysicsEngine {
 		return Math.POSITIVE_INFINITY;
 	}
 
-	private function getRayIntersectionFraction(direction:Float):Float {
+	private function getRayIntersectionFraction(direction:Vector):Float {
 		var minT:Float = getLineIntersection(new Vector(), direction, new Vector(mdResult.x, mdResult.y), new Vector(mdResult.x, mdResult.y + mdResult.h));
 		var x:Float = getLineIntersection(new Vector(), direction, new Vector(mdResult.x, mdResult.y + mdResult.h), new Vector(mdResult.x, mdResult.y + mdResult.h));
 		if(x < minT) {
@@ -259,5 +286,5 @@ class PhysicsMD extends PhysicsEngine {
 		}
 
 		return minT;
-	}
+	}*/
 }

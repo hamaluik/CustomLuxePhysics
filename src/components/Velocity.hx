@@ -1,4 +1,4 @@
-package ;
+package components;
 
 import luxe.Component;
 import luxe.Vector;
@@ -26,6 +26,6 @@ class Velocity extends Component {
 	}
 
 	override public function update(dt:Float) {
-		aabb.move( v.x * dt * Luxe.timescale, v.y * dt * Luxe.timescale );
+		aabb.move( v.x * dt * Luxe.timescale, v.y * dt );
 	}
 }
